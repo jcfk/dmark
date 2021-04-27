@@ -8,9 +8,49 @@ In the world of plaintext, you have to choose between "livable" human-friendly d
 
 The `.dm` extension is hereby seized for `dmark` files!
 
+## `dmark` language
+
+See the [JSON spec](https://www.json.org/json-en.html).
+
+The `dmark` language is identical in function to JSON. Roughly, in the terminology of the JSON spec, a value can be an "object" (dict), "array" (list), string, or number. An object maps strings to values, and an array contains values. The syntax for a `dmark` value is determined by both the type of the value and the type of the value containing it. Parent-child relationships are shown with indentation.
+
+Strings and numbers inside an object:
+```
+@key1: stringstringstring
+@key2: 420133769
+```
+
+One can access the values like this: `object["key1"]`.
+
+Strings and numbers inside an array:
+```
+@ iamtheverymodelofamodernmajorgeneral
+@ 3.1415
+```
+
+One can access the values like this: `array[0]`.
+
+An object inside an object:
+```
+@key1
+	@key2: singsingsing
+	@key3: -111
+```
+
+One can access the values like this: `object["key1"]["key2"]`.
+
+An object inside an array:
+```
+@
+	@key1: iveinformationvegetableanimalandmineral
+	@key2: 0
+```
+
+One can access the values like this: `array[0]["key1"]`.
+
+Using the `Dmark` class in `dmark.py`, the document object is the `value` attribute. See below for examples.
 
 ## `dmark.py` examples
-
 
 Document "todo.dm":
 ```
@@ -58,7 +98,7 @@ Write 1:
 today = dm.value["days"][0]
 today["complete"].append(today["incomplete"].pop())
 dm.value["completed"] += 1
-dm.write();
+dm.write()
 ```
 
 Out 1:
