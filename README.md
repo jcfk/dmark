@@ -1,160 +1,108 @@
-## The `d(ata)mark(down)` Thesis
+## The theory of `d(ata)mark(down)`
 
-In the world of plaintext, you're made to choose between static "human writable" prose-style documents (.md, .txt) and explicitly "computer writable" data files (.json, .xml). To combine prose with modifiable data, you're forced to rely on editor macros, which are limiting.
+In the world of plaintext, you have to choose between "livable" human-friendly documents in .md and .txt (for your minimalist todo lists and such) and entirely "computer writable" data files (.json, .xml). But what if you want to combine prose with programmatically read/writeable data in one file?
 
-No more! `dmark` is a markdown derivative and parser solving this problem. It exists to
+`dmark` is first and foremost a language which adds the json syntax to human-friendly prose documents to make documents that are both livable and programmatically read/writeable. The point is to bridge the gap between these two styles of plaintext.
 
-1. provide an arbitrarily structured and modifiable data standard within markdown, and
-2. provide a visual demarcation between data and prose.
+`dmark.py` contains a `Dmark` class which can be used to parse and modify `dmark` files.
 
-## Quick start
+The `.dm` extension is hereby seized for `dmark` files!
 
-Example file:
 
+## `dmark.py` examples
+
+
+Document "todo.dm":
 ```
-// todo.dm
-
 ### LONG TERM
 
 - Write romantic poem
 - Become CEO of Apple
 
-"Stew or stew not. There is no fry." - Yoda
+Who would even want to become CEO of Apple?
+
 
 ### MID TERM
 
 - Fix home server
 - Update CV
 
-
 Stats:
-@tasks-completed: 278
-@tasks-remaining: 4
-@average-daily-completions: 6.13333333333333333
+@completed: 278
+@remaining: 4
 
-@todo-list[
-@[
-	@date: Tuesday, September 1 2020 
-
-	@incomplete[
-		@: task3
-		@: task4
-		@: {task5 is a paragraph
-which spans multiple lines}
-	]
-
-	@complete[
-		@: task1
-		@: task2
-	]
-
-	Let's consider this the day's notes!
-
-]
-]
-
+@days
+	@
+		@date: Tuesday, September 1 2020 
+		@incomplete
+			@: task3
+			@: task4
+		@complete
+			@: task1
+			@: task2
 ```
 
-Parsing:
+Reading:
 ```
-import dmark
+from dmark import Dmark
 
-doc = dmark.open("todo.dm");
+dm = Dmark("todo.dm")
 
-# doc["tasks-completed"]                 == "278"
-# doc[0]                                 == "278"
-
-# doc["todo-list"][0]["date"]            == "Tuesday, September 1 2020"
-# doc["todo-list"][0]["incomplete"][0]   == "task3"
-
+dm.value["completed"]                       == 278
+dm.value["days"][0]["date"]                 == "Tuesday, September 1 2020"
+dm.value["days"][0]["incomplete"][0]        == "task3"
 ```
 
-Editing:
+Write 1:
 ```
-doc["tasks-completed"] = 279
-
-doc.write();
-doc.close();
-
-# OR
-
-doc.close();
-
+today = dm.value["days"][0]
+today["complete"].append(today["incomplete"].pop())
+dm.value["completed"] += 1
+dm.write();
 ```
 
-Out:
+Out 1:
 ```
 ...
 Stats:
-@tasks-completed: 278
+@completed: 278
 ...
-
-```
-
-Add and Remove 1:
-```
-doc.append(0, "new-statistic"
-
-doc["todo-list"][0]["incomplete"].remove("task3")
-doc["todo-list"][0]["complete"].append("task3")
-
-```
-
-Out:
-```
+@days
+	@
+		@date: Tuesday, September 1 2020 
+		@incomplete
+			@: task3
+		@complete
+			@: task1
+			@: task2
+			@: task4
 ...
-	@incomplete[
-		@: task4
-		@: {task5 is a paragraph
-which spans multiple lines}
-	]
-
-	@complete[
-		@: task1
-		@: task2
-		@: task3
-	]
-...
-
 ```
 
-Add and Remove 2:
+Write 2:
 ```
-doc["todo-list"].insert(0, "", "", Type.WRAP)
-
-doc["todo-list"][0].append("Wednesday, September 2 2020", "date")
-
-doc["todo-list"][0].append("", "incomplete", Type.WRAP)
-doc["todo-list"][0]["incomplete"].append("task0")
-
-doc["todo-list"][0].append("", "complete", Type.WRAP)
-
-
+dm.value["days"].insert(0, {date: todaystring, incomplete: [], complete: []})
+dm.value["days"][0]["incomplete"].extend(dm.value["days"][1]["incomplete"])
+dm.value["days"][1]["incomplete"] = []
+dm.write()
 ```
 
-Out:
+Out 2:
 ```
 ...
-
-@todo-list[
-@[
-	@date: Wednesday, September 2 2020
-
-	@incomplete[
-		@: task0
-
-	]
-
-	@complete[]
-
-]
-
-@[
-	@date: Tuesday, September 1 2020 
+@days
+	@
+		@date: Wednesday, September 2 2020 
+		@incomplete
+			@: task3
+			@: task4
+		@complete
+	@
+		@date: Tuesday, September 1 2020 
+		@incomplete
+		@complete
+			@: task1
+			@: task2
 ...
-
 ```
-
-
-
 
