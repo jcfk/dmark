@@ -69,7 +69,6 @@ Who would even want to become CEO of Apple?
 
 Stats:
 @completed: 278
-@remaining: 4
 
 @days
 	@
@@ -105,7 +104,7 @@ Out 1:
 ```
 ...
 Stats:
-@completed: 278
+@completed: 279
 ...
 @days
 	@
