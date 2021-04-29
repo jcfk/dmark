@@ -12,7 +12,9 @@ The `.dm` extension is hereby seized for `dmark` files!
 
 See the [JSON spec](https://www.json.org/json-en.html).
 
-The `dmark` language is identical in function to JSON. Roughly, in the terminology of the JSON spec, a value can be an "object" (dict), "array" (list), string, or number. An object maps strings to values, and an array contains values. The syntax for a `dmark` value is determined by both the type of the value and the type of the value containing it. Parent-child relationships are shown with indentation.
+For now, the `dmark` language is identical in function to JSON. Roughly, in the terminology of the JSON spec, a value can be an "object" (dict), "array" (list), string, or number. An object maps strings to values, and an array contains values. The syntax for a `dmark` value is determined by both the type of the value and the type of the value containing it. Parent-child relationships are shown with indentation.
+
+I say "for now" because conceivably one could implement tables as well...
 
 Strings and numbers inside an object:
 ```
