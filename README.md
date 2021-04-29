@@ -48,6 +48,17 @@ An object inside an array:
 
 One can access the values like this: `array[0]["key1"]`.
 
+Multi-line strings are represented like this:
+```
+@
+	@ {
+		This is a multi line string!
+		Here is the next line.
+	}
+```
+
+The above line is "\n\t\tThis is a multi line string!\n\t\tHere is the next line.".
+
 Using the `Dmark` class in `dmark.py`, the document object is the `value` attribute. See below for examples.
 
 ## `dmark.py` examples
