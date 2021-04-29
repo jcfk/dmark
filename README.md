@@ -57,7 +57,7 @@ Multi-line strings are represented like this:
 	}
 ```
 
-The above line is "\n\t\tThis is a multi line string!\n\t\tHere is the next line.".
+The above string is "\n\t\tThis is a multi line string!\n\t\tHere is the next line.\n\t".
 
 Using the `Dmark` class in `dmark.py`, the document object is the `value` attribute. See below for examples.
 
