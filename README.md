@@ -2,7 +2,7 @@
 
 In the world of plaintext, you have to choose between "livable" human-friendly documents in .md and .txt (for your minimalist todo lists and such) and entirely "computer writable" data files (.json, .xml). But what if you want to combine prose with programmatically read/writeable data in one file?
 
-`dmark` is first and foremost a language which adds the json syntax to human-friendly prose documents to make documents that are both livable and programmatically read/writeable. The point is to bridge the gap between these two styles of plaintext.
+`dmark` is first and foremost a language which adds the json syntax to human-friendly prose documents to make documents that are both livable and programmatically read/writeable. The point is to bridge the gap between these two facets of plaintext.
 
 `dmark.py` contains a `Dmark` class which can be used to parse and modify `dmark` files.
 
@@ -12,9 +12,9 @@ The `.dm` extension is hereby seized for `dmark` files!
 
 See the [JSON spec](https://www.json.org/json-en.html).
 
-For now, the `dmark` language is identical in function to JSON. Roughly, in the terminology of the JSON spec, a value can be an "object" (dict), "array" (list), string, or number. An object maps strings to values, and an array contains values. The syntax for a `dmark` value is determined by both the type of the value and the type of the value containing it. Parent-child relationships are shown with indentation.
+For now, the `dmark` language is identical in function to JSON. Roughly, in the terminology of the JSON spec, a value can be an "object" (dict), "array" (list), string, or number. An object maps strings to values, and an array contains values. These values can be expressed in plaintext dmark files. The syntax for a `dmark` value is determined by both the type of the value and the type of the value containing it. Parent-child relationships are shown with indentation.
 
-I say "for now" because conceivably one could implement tables as well...
+"For now" because conceivably one could implement tables as well...
 
 Strings and numbers inside an object:
 ```

@@ -6,16 +6,12 @@ class Utilities:
         def raw_value_recur(value):
             if (type(value) == DmarkDict):
                 return({k: raw_value_recur(v) for (k, v) in value.items()})
-
             elif (type(value) == DmarkList):
                 return([raw_value_recur(v) for v in value])
-
             elif (self.simple(value)):
                 return(value)
-
         if (type(self) == Dmark):
             return(raw_value_recur(self.value))
-
         return(raw_value_recur(self))
 
     @staticmethod
@@ -26,29 +22,25 @@ class Utilities:
     def value_height(value):
         if (type(value) != str):
             return(1)
-
         return(value.count("\n") + 1)
 
 class DmarkBase(Utilities):
     def __init__(self, meta, path, init):
         if (type(meta) == list):
             self.meta = meta
-
         else:
-            sys.exit("Err: meta required to build DmarkBase")
-
+            sys.exit("Err 1: meta required to build DmarkBase")
         if (type(path) == tuple):
             self.meta[1][id(self)] = path
-
         else:
-            sys.exit("Err: path required to build DmarkBase")
-
+            sys.exit("Err 2: path required to build DmarkBase")
         self.init = init
 
     def path(self):
         return(self.meta[1][id(self)])
 
-    def meta_height(self):
+    # Get current total height of all tracked dmark syntax
+    def total_height(self):
         return(sum(self.meta[2].values()))
 
     def meta_set(self, key, struct):
@@ -58,22 +50,22 @@ class DmarkBase(Utilities):
         key_path = (*self.path(), key)
         value_height = self.value_height(struct)
 
+        print(self.meta)
         if (key_path in self.meta[0]):
             key_linenum = self.meta[0][key_path][0]
-            old_height = self.meta_height()
-
+            old_height = self.total_height()
             self.meta_del_children(key_path)
-            diff = old_height - self.meta_height() + value_height - 1
-            self.meta_shift_below_by(key_linenum, -diff)
-
+            # diff = old_height - self.total_height() + value_height - 1
+            diff = self.total_height() - old_height + value_height - 1
+            self.meta_shift_below_by(key_linenum, diff)
         else:
             key_location = self.meta_new_child_location(self.path())
             key_linenum = key_location[0]
-
             self.meta_shift_below_by(key_linenum - 1, value_height)
             self.meta[0][key_path] = key_location
 
         self.meta[2][key_path] = value_height
+        print(self.meta)
 
         if (type(struct) == DmarkDict or type(struct) == DmarkList):
             struct = struct.raw_value()
@@ -82,12 +74,10 @@ class DmarkBase(Utilities):
             dmd = DmarkDict(self.meta, key_path, True)
             dmd.update(struct)
             return(dmd)
-
         elif (type(struct) == list):
             dml = DmarkList(self.meta, key_path, True)
             dml.extend(struct)
             return(dml)
-
         elif (self.simple(struct)):
             return(struct)
 
@@ -243,32 +233,26 @@ class DmarkList(DmarkBase, MutableSequence):
 
         if (type(struct) == DmarkDict or type(struct) == DmarkList):
             struct = struct.raw_value()
-
         if (type(struct) == dict):
             dmd = DmarkDict(self.meta, index_path, True)
             dmd.update(struct)
             return(dmd)
-
         elif (type(struct) == list):
             dml = DmarkList(self.meta, index_path, True)
             dml.extend(struct)
             return(dml)
-
         elif (self.simple(struct)):
             return(struct)
 
     def meta_del(self, index):
         if (not self.init):
             return
-
         index_path = (*self.path(), index)
         index_linenum = self.meta[0][index_path][0]
-        old_height = self.meta_height()
-
+        old_height = self.total_height()
         self.meta_del_children_or_eq(index_path)
         self.meta_shift_paths_after_or_at_by(index_path, -1)
-
-        diff = old_height - self.meta_height()
+        diff = old_height - self.total_height()
         self.meta_shift_below_by(index_linenum, -diff)
 
 class DmarkDict(DmarkBase, MutableMapping):
@@ -301,14 +285,11 @@ class DmarkDict(DmarkBase, MutableMapping):
     def meta_del(self, key):
         if (not self.init):
             return
-
         key_path = (*self.path(), key)
         key_linenum = self.meta[0][key_path][0]
-        old_height = self.meta_height()
-
+        old_height = self.total_height()
         self.meta_del_children_or_eq(key_path)
-
-        diff = old_height - self.meta_height()
+        diff = old_height - self.total_height()
         self.meta_shift_below_by(key_linenum, -diff)
 
 class Dmark(Utilities):
@@ -320,103 +301,98 @@ class Dmark(Utilities):
         self.value, self.meta = self.parse_file(file_name)
         self.old_meta = [self.meta[0].copy(), self.meta[2].copy()]
 
+    # Write out changes to file
     def write(self):
-        f = open(self.file_name, "r")
-        lines = f.readlines()
-        f.close()
-
-        offset = 1
-        for (path, (linenum, _)) in sorted(
-            self.old_meta[0].items(), key=(lambda t: t[1][0])
-        ):
-            if (linenum < 1):
-                pass
-
-            change = 0
-            for _ in range(self.old_meta[1][path]):
-                del lines[linenum - offset]
-                change += 1
-
-            offset += change
-
+        # Insert multiple lines corresponding to a bracket-enclosed long string
+        # into lines.
         def write_long_string(content, path):
             (linenum, indent) = self.meta[0][path]
-
             if (type(content) == tuple):
                 key, value = content
                 value_lines = [line + "\n" for line in value.split("\n")]
-
                 value_lines[0] = key + ": {" + value_lines[0]
-
             elif (type(content) == list):
                 value = content[0]
                 value_lines = [line + "\n" for line in value.split("\n")]
-
                 value_lines[0] = " {" + value_lines[0]
-
             value_lines[0] = "\t" * indent + "@" + value_lines[0]
             value_lines[-1] = value_lines[-1][:-1] + "}\n"
-
             lines[linenum-1: linenum-1] = value_lines
 
-        def write_line(content, path):
+        # Write a single "piece" of a value to the file
+        #
+        # A "piece" is something which corresponds to a single line (or is a
+        # long string, which can take up multiple lines). So: a single "simple"
+        # list or dict item, or a single "complex" list or dict item's "@"
+        # indicator.
+        def write_content(content, path):
             (linenum, indent) = self.meta[0][path]
-
-            if (type(content) == tuple):
+            if (type(content) == tuple): # dict k, v pair (simple value)
                 key, value = content
-                if (self.value_height(value) > 1):
+                if (self.value_height(value) > 1): # long string!
                     return(write_long_string((key, value), path))
-
                 line = str(key) + ": " + str(value)
-
-            elif (type(content) == list):
+            elif (type(content) == list): # list element (simple value)
                 value = content[0]
                 if (self.value_height(value) > 1):
                     return(write_long_string([value], path))
-
                 line = " " + str(value)
-
-            elif (self.simple(content)):
+            elif (self.simple(content)): # dict key (complex value)
                 line = str(content)
-
-            elif (not content):
+            elif (not content): # list element (complex value)
                 line = ""
-
             line = "\t" * indent + "@" + line + "\n"
             lines.insert(linenum - 1, line)
 
+        # Call write_content recursively on value
         def write_recur(value, path=()):
             if (type(value) == DmarkDict):
                 for (k, v) in value.items():
                     key_path = (*path, k)
-
                     if (type(v) == DmarkDict or type(v) == DmarkList):
-                        write_line(k, key_path)
+                        write_content(k, key_path)
                         write_recur(v, key_path)
-
                     elif (self.simple(v)):
-                        write_line((k, v), key_path)
-
+                        write_content((k, v), key_path)
             elif (type(value) == DmarkList):
                 i = 0
                 for element in value:
                     element_path = (*path, i)
-
                     if (type(element) == DmarkDict or type(element) == DmarkList):
-                        write_line(None, element_path)
+                        write_content(None, element_path)
                         write_recur(element, element_path)
-
                     elif (self.simple(element)):
-                        write_line([element], element_path)
-
+                        write_content([element], element_path)
                     i +=1
 
-        write_recur(self.value)
+        # Get current lines in file
+        f = open(self.file_name, "r")
+        lines = f.readlines()
+        f.close()
 
+        # Make backup of file
+        f = open(self.file_name+".bak", "w")
+        f.writelines(lines)
+        f.close()
+
+        # Delete all existing dmark lines
+        offset = 1
+        for (path, (linenum, _)) in sorted(self.old_meta[0].items(), key=(lambda t: t[1][0])):
+            if (linenum < 1):
+                pass
+            change = 0
+            for _ in range(self.old_meta[1][path]):
+                del lines[linenum - offset]
+                change += 1
+            offset += change
+
+        # Write out new dmark value
+        write_recur(self.value)
         f = open(self.file_name, "w")
         f.writelines(lines)
         f.close()
 
+        # Make old_meta reflect current file
         self.old_meta = [self.meta[0].copy(), self.meta[2].copy()]
 
     @staticmethod
@@ -458,7 +434,8 @@ class Dmark(Utilities):
 
                 # fix regexes
                 if (content[0] == "@"):
-                    if (re.fullmatch(r"@[^ ]..*: {.*}\n", content)):
+                    # keyed long string on one line
+                    if (re.fullmatch(r"@[^\s]..*: {.*}\n", content)):
                         content = content.strip()
                         content = content.split(": {")
 
@@ -467,12 +444,14 @@ class Dmark(Utilities):
 
                         ret = (key, value)
 
+                    # unkeyed long string on one line
                     elif (re.fullmatch(r"@ {.*}\n", content)):
                         value = content[3:-2]
 
                         ret = [value]
 
-                    elif (re.fullmatch(r"@[^ ]..*: {.*\n", content)):
+                    # keyed long string beginning
+                    elif (re.fullmatch(r"@[^\s]..*: {.*\n", content)):
                         content = content.split(": {")
 
                         key = content[0][1:]
@@ -485,13 +464,14 @@ class Dmark(Utilities):
                             line = f.readline()
 
                             if (not line):
-                                sys.exit("Err: no corresponding \"}\".")
+                                sys.exit("Err 3: no corresponding \"}\".")
 
                         value += line[:-2]
                         diff += 1
 
                         ret = (key, value)
 
+                    # unkeyed long string beginning
                     elif (re.fullmatch(r"@ {.*\n", content)):
                         value = content[3:]
 
@@ -502,14 +482,15 @@ class Dmark(Utilities):
                             line = f.readline()
 
                             if (not line):
-                                sys.exit("Err: no corresponding \"}\".")
+                                sys.exit("Err 4: no corresponding \"}\".")
 
                         value += line[:-2]
                         diff += 1
 
                         ret = [value]
 
-                    elif (re.fullmatch(r"@[^ ]..*: ..*\n", content)):
+                    # keyed simple (numeric or short string) value
+                    elif (re.fullmatch(r"@[^\s]+: .+\n", content)):
                         content = content.strip()
                         content = content.split(": ")
 
@@ -518,21 +499,25 @@ class Dmark(Utilities):
 
                         ret = (key, value)
 
-                    elif (re.fullmatch(r"@ ..*\n", content)):
+                    # unkeyed simple value
+                    elif (re.fullmatch(r"@ .*[^\s]+\s*\n", content)):
                         content = content.strip()
                         value = try_numeric(content[2:])
 
                         ret = [value]
 
-                    elif (re.fullmatch(r"@..*\n", content)):
+                    # keyed complex (list or dict) value
+                    elif (re.fullmatch(r"@[^\s]+\s*\n", content)):
                         content = content.strip()
                         ret = content[1:]
 
-                    elif (re.fullmatch(r"@\n", content)):
+                    # unkeyed complex value
+                    elif (re.fullmatch(r"@\s*\n", content)):
                         ret = None
 
                     else:
-                        sys.exit("Err: syntax error... right? Check the regexes.")
+                        print(content)
+                        sys.exit("Err 5: syntax error... right? Check the regexes.")
 
                     lines.append((ret, (linenum, indent)))
 
@@ -541,22 +526,17 @@ class Dmark(Utilities):
 
         def value_gen(lines, meta, depth=0, parent_path=()):
             value = DmarkList(meta, parent_path)
-
             while (len(lines) > 0):
                 content, location = lines[0]
                 indent = location[1]
-
                 if (indent == depth):
                     del lines[0]
-
                     # List (str or int)
                     if (type(content) == list):
                         if (type(value) == DmarkDict):
-                            sys.exit("Err: no keyless values in dict")
-
+                            sys.exit("Err 6: no keyless values in dict")
                         index = len(value)
                         new_path = (*parent_path, index)
-
                         new_value = content[0]
                         value.append(new_value)
 
@@ -564,13 +544,10 @@ class Dmark(Utilities):
                     elif (type(content) == tuple):
                         if (type(value) == DmarkList and len(value) == 0):
                             value = value._to_dict()
-
                         elif (type(value) == DmarkList and len(value) > 0):
-                            sys.exit("Err: no keyed values in list")
-
+                            sys.exit("Err 7: no keyed values in list")
                         key = content[0]
                         new_path = (*parent_path, key)
-
                         new_value = content[1]
                         value[key] = new_value
 
@@ -578,21 +555,17 @@ class Dmark(Utilities):
                     elif (type(content) == str):
                         if (type(value) == DmarkList):
                             value = value._to_dict()
-
                         key = content
                         new_path = (*parent_path, key)
-
                         new_value = value_gen(lines, meta, depth+1, new_path)
                         value[key] = new_value
 
                     # List (dict or list)
                     elif (not content):
                         if (type(value) == DmarkDict):
-                            sys.exit("Err: no keyless values in dict")
-
+                            sys.exit("Err 8: no keyless values in dict")
                         index = len(value)
                         new_path = (*parent_path, index)
-
                         new_value = value_gen(lines, meta, depth+1, new_path)
                         value.append(new_value)
 
@@ -601,32 +574,31 @@ class Dmark(Utilities):
                     meta[2][new_path] = value_height(new_value)
 
                 elif (indent > depth):
-                    sys.exit("Err: badly indented line")
-
+                    sys.exit("Err 9: badly indented line")
                 else:
                     return(value)
-
             return(value)
 
         def init(value):
             if (type(value) == DmarkDict):
                 value.init = True
-
                 for (_, val) in value.items():
                     init(val)
-
             elif (type(value) == DmarkList):
                 value.init = True
-                
                 for val in value:
                     init(val)
 
-        meta = [{(): (-1, -1)}, {-1: ()}, {(): 0}]
+        meta = [
+            # A mapping from value path tuple to (linenum, indent) position
+            {(): (-1, -1)},
+            # A mapping from DmarkBase object id to value path tuple
+            {-1: ()},
+            # A mapping from value path tuple to "piece height" in lines
+            # Why not combine this with the first dict?
+            {(): 0}
+        ]
         value = value_gen(lines, meta)
         init(value)
-
         return(value, meta)
-
-
-
 
